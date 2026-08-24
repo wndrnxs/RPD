@@ -36,7 +36,8 @@ Godot 4 / 모바일 세로 우선 / Android · iOS · Steam 출시 목표.
 
 | 문서 | 내용 |
 |---|---|
-| [tools/hand_sim.py](tools/hand_sim.py) | 족보 확률 시뮬레이터 (Python). `python3 tools/hand_sim.py` |
+| [tools/hand_sim.py](tools/hand_sim.py) | 족보 확률 시뮬레이터. `python3 tools/hand_sim.py` |
+| [tools/sprite_check.py](tools/sprite_check.py) | AI 생성 스프라이트 검증·후처리. `python3 tools/sprite_check.py <이미지>` |
 | [assets/_prompts/](assets/_prompts/) | AI 아트 프롬프트. 바로 쓸 완성본은 [02-ready-to-paste.md](assets/_prompts/02-ready-to-paste.md) |
 | [01-game-design.md](docs/01-game-design.md) | 게임 디자인 문서 — 코어 루프, 포커 시스템, 타워/무늬 특성, 경제, 스테이지 구조, 메타 성장 |
 | [02-tech-architecture.md](docs/02-tech-architecture.md) | Godot 4 프로젝트 구조, 데이터 스키마, 성능 예산, 플랫폼 익스포트 |
