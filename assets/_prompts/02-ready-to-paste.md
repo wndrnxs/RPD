@@ -27,6 +27,62 @@ STEP 3  나머지 8종을 그 사이에 배치
 
 ---
 
+## ⚠️ 네거티브 프롬프트를 어디에 넣는가
+
+**본문 프롬프트와 절대 이어붙이지 마세요.** 툴에 따라 넣는 위치가 다릅니다.
+
+| 툴 | 방법 |
+|---|---|
+| Stable Diffusion 계열 (A1111 · ComfyUI · Forge), Leonardo, NightCafe, Krea | **Negative prompt 입력란**에 따로 붙여넣기 |
+| Midjourney | 본문 끝에 `--no` 를 붙이고 그 뒤에 나열 |
+| ChatGPT(DALL·E · GPT Image), Gemini(Nano Banana), Claude | **네거티브 입력란이 없음** → 아래 "통합 버전" 사용 |
+
+**Midjourney 예시**
+
+```
+[STEP 0 본문] --no 3d render, smooth gradients, anti-aliasing, photorealistic, purple glow, colored light, oversaturated, text, watermark, ui elements, multiple buildings, cluttered background, sky, casino, poker chips, playing cards, gambling, dice, human figure, cropped
+```
+
+추가로 `--ar 1:1 --stylize 250` 정도를 권장합니다.
+
+---
+
+## STEP 0-B · 통합 버전 (네거티브 입력란이 없는 툴용)
+
+ChatGPT · Gemini · Claude처럼 대화형으로 이미지를 만드는 툴은 네거티브 필드가 없습니다.
+이 툴들은 **자연어 지시를 잘 알아들으므로** 제약을 문장으로 적는 편이 낫습니다.
+
+```
+Create a single isometric pixel art game asset for a tower defense game.
+
+STYLE: Detailed 16-bit isometric pixel art, 45 degree projection with 2:1 pixel ratio.
+Chunky readable pixels with crisp hard edges and visible pixel grid. Use subtle dithering
+for shading. Muted, desaturated palette: cool grey weathered stone with warm earth and
+moss tones. Top-left key light with a dark outline around the structure.
+
+SUBJECT: A modest stone wizard watchtower - a single round tower with a conical slate
+roof, one glowing window, and cracked mossy masonry. It stands on a diamond-shaped base
+plate that shows a layered soil cross-section with a grass edge. Scatter a few small
+rocks and weed tufts on the base plate.
+
+CRITICAL CONSTRAINTS:
+- The glow from the window must be PALE WHITE or very light cyan-white. It must NOT be
+  purple, blue, orange, or any saturated color. This is essential - the glow will be
+  recolored later in the game engine.
+- Exactly ONE structure, centered in frame, fully visible and not cropped.
+- Flat solid sage green background (#8a9a6b). No sky, no scenery, no horizon.
+- No text, letters, numbers, watermarks, logos, or UI elements anywhere.
+- Strictly 2D pixel art. Not a 3D render, not smooth or blurry, no anti-aliasing.
+- Arcane fantasy theme only. No casino, gambling, playing card, or dice imagery.
+
+Output as a square image.
+```
+
+> 이 버전은 STEP 0 전용입니다. STEP 1~10은 `SUBJECT:` 문단만 해당 타워 설명으로
+> 바꿔 끼우면 그대로 쓸 수 있습니다.
+
+---
+
 ## STEP 0 · 스타일 시트 (가장 먼저)
 
 ```
