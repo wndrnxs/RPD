@@ -3,7 +3,10 @@
 포커 족보로 타워를 만드는 1인용 싱글 타워 디펜스.
 Godot 4 / 모바일 세로 우선 / Android · iOS · Steam 출시 목표.
 
-> **현재 상태: 기획 + M0 시뮬레이션.**
+> **▶ 플레이 가능한 프로토타입:** https://claude.ai/code/artifact/47ede4ca-002f-4fe0-801d-0257ccf37a78
+> 브라우저에서 바로 돌아갑니다. ([prototype/README.md](prototype/README.md))
+>
+> **현재 상태: 기획 + M0 시뮬레이션 + 웹 프로토타입.**
 > 게임 코드는 아직 없지만, 족보 확률 시뮬레이터(`tools/hand_sim.py`)는 동작하며
 > 밸런싱의 기준이 되는 실측 분포가 [01 문서 2.3절](docs/01-game-design.md)에 들어가 있습니다.
 
@@ -36,6 +39,7 @@ Godot 4 / 모바일 세로 우선 / Android · iOS · Steam 출시 목표.
 
 | 문서 | 내용 |
 |---|---|
+| [prototype/](prototype/) | 플레이 가능한 웹 프로토타입 (룰 검증용, 최종 코드 아님) |
 | [tools/hand_sim.py](tools/hand_sim.py) | 족보 확률 시뮬레이터. `python3 tools/hand_sim.py` |
 | [tools/sprite_check.py](tools/sprite_check.py) | AI 생성 스프라이트 검증·후처리. `python3 tools/sprite_check.py <이미지>` |
 | [assets/_prompts/](assets/_prompts/) | AI 아트 프롬프트. 제미나이·ChatGPT는 [03-gemini.md](assets/_prompts/03-gemini.md), SD·Midjourney는 [02-ready-to-paste.md](assets/_prompts/02-ready-to-paste.md) |
