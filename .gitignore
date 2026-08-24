@@ -1,1 +1,18 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# 스프라이트 검증 출력물
 *_check/
+
+# 원본 생성 이미지 (용량이 큼 — 필요하면 Git LFS로 별도 관리)
+assets/raw/
+
+# macOS
+.DS_Store
+
+# Godot
+.godot/
+export_presets.cfg
