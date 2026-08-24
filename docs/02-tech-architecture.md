@@ -35,9 +35,9 @@ res://
 │   │   ├── HandRank.gd          # enum + 상수
 │   │   └── HandEvaluator.gd     # 5장 → 족보 판정 (순수 함수) ★ 최우선 테스트 대상
 │   ├── combat/
-│   │   ├── Element.gd           # 4무늬 특성 (관통/열화/서리/맹독)
+│   │   ├── Element.gd           # 4무늬 속성 (관통/화염/얼음/독), 배율 없음
 │   │   ├── TowerBuilder.gd      # 최종 5장 → TowerStats 변환
-│   │   └── DamageCalc.gd        # 특성/방어력/치명타/족보강화/보정 적용
+│   │   └── DamageCalc.gd        # 속성효과/방어력/치명타/강화배율/보정 적용
 │   ├── economy/
 │   │   └── CostCurve.gd         # 건설 비용, 강화 비용, 보상 공식
 │   └── sim/
@@ -66,7 +66,7 @@ res://
 │   │   ├── BuildSheet.tscn      # 카드 선택/리드로우 시트
 │   │   ├── CardView.tscn
 │   │   ├── TowerInspector.tscn  # 타겟팅 / 철거
-│   │   ├── UpgradePanel.tscn    # 족보 단위 강화 (10줄 + 필드 보유 수)
+│   │   ├── UpgradePanel.tscn    # 타워 종류별 강화 (10줄 + 필드 보유 수)
 │   │   ├── WavePreview.tscn
 │   │   └── ArtifactPicker.tscn
 │   └── meta/
