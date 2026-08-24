@@ -1,6 +1,8 @@
 # 02 · 바로 복사해서 쓰는 프롬프트
 
-> 조립 필요 없이 **그대로 복사**하면 됩니다.
+> **네거티브 프롬프트 입력란이 있는 툴 전용입니다** (Stable Diffusion 계열, Leonardo, Midjourney 등).
+> 제미나이·ChatGPT·Claude를 쓰신다면 → **[03-gemini.md](03-gemini.md)** 를 보세요.
+>
 > 설계 의도와 검증 기준은 [00-style-sheet.md](00-style-sheet.md) · [01-towers.md](01-towers.md) 참조.
 
 ## 순서
@@ -47,39 +49,12 @@ STEP 3  나머지 8종을 그 사이에 배치
 
 ---
 
-## STEP 0-B · 통합 버전 (네거티브 입력란이 없는 툴용)
+## 제미나이 · ChatGPT · Claude를 쓰신다면
 
-ChatGPT · Gemini · Claude처럼 대화형으로 이미지를 만드는 툴은 네거티브 필드가 없습니다.
-이 툴들은 **자연어 지시를 잘 알아들으므로** 제약을 문장으로 적는 편이 낫습니다.
+네거티브 입력란이 없으므로 **[03-gemini.md](03-gemini.md)** 의 프롬프트를 쓰세요.
+제약이 자연어 문장으로 재구성되어 있고, 10종 전부 변환되어 있습니다.
 
-```
-Create a single isometric pixel art game asset for a tower defense game.
-
-STYLE: Detailed 16-bit isometric pixel art, 45 degree projection with 2:1 pixel ratio.
-Chunky readable pixels with crisp hard edges and visible pixel grid. Use subtle dithering
-for shading. Muted, desaturated palette: cool grey weathered stone with warm earth and
-moss tones. Top-left key light with a dark outline around the structure.
-
-SUBJECT: A modest stone wizard watchtower - a single round tower with a conical slate
-roof, one glowing window, and cracked mossy masonry. It stands on a diamond-shaped base
-plate that shows a layered soil cross-section with a grass edge. Scatter a few small
-rocks and weed tufts on the base plate.
-
-CRITICAL CONSTRAINTS:
-- The glow from the window must be PALE WHITE or very light cyan-white. It must NOT be
-  purple, blue, orange, or any saturated color. This is essential - the glow will be
-  recolored later in the game engine.
-- Exactly ONE structure, centered in frame, fully visible and not cropped.
-- Flat solid sage green background (#8a9a6b). No sky, no scenery, no horizon.
-- No text, letters, numbers, watermarks, logos, or UI elements anywhere.
-- Strictly 2D pixel art. Not a 3D render, not smooth or blurry, no anti-aliasing.
-- Arcane fantasy theme only. No casino, gambling, playing card, or dice imagery.
-
-Output as a square image.
-```
-
-> 이 버전은 STEP 0 전용입니다. STEP 1~10은 `SUBJECT:` 문단만 해당 타워 설명으로
-> 바꿔 끼우면 그대로 쓸 수 있습니다.
+**이 파일과 03번 파일을 둘 다 넣으면 안 됩니다. 툴에 맞는 하나만 고르세요.**
 
 ---
 
