@@ -3,7 +3,9 @@
 포커 족보로 타워를 만드는 1인용 싱글 타워 디펜스.
 Godot 4 / 모바일 세로 우선 / Android · iOS · Steam 출시 목표.
 
-> **현재 상태: 기획 단계.** 코드는 아직 없습니다. 이 저장소에는 개발 계획 문서만 있습니다.
+> **현재 상태: 기획 + M0 시뮬레이션.**
+> 게임 코드는 아직 없지만, 족보 확률 시뮬레이터(`tools/hand_sim.py`)는 동작하며
+> 밸런싱의 기준이 되는 실측 분포가 [01 문서 2.3절](docs/01-game-design.md)에 들어가 있습니다.
 
 ## 한 줄 요약
 
@@ -34,6 +36,8 @@ Godot 4 / 모바일 세로 우선 / Android · iOS · Steam 출시 목표.
 
 | 문서 | 내용 |
 |---|---|
+| [tools/hand_sim.py](tools/hand_sim.py) | 족보 확률 시뮬레이터 (Python). `python3 tools/hand_sim.py` |
+| [assets/_prompts/](assets/_prompts/) | AI 아트 생성 프롬프트 — 스타일 시트, 타워 10종 |
 | [01-game-design.md](docs/01-game-design.md) | 게임 디자인 문서 — 코어 루프, 포커 시스템, 타워/무늬 특성, 경제, 스테이지 구조, 메타 성장 |
 | [02-tech-architecture.md](docs/02-tech-architecture.md) | Godot 4 프로젝트 구조, 데이터 스키마, 성능 예산, 플랫폼 익스포트 |
 | [03-roadmap.md](docs/03-roadmap.md) | 마일스톤 M0~M7, 각 단계의 산출물과 완료 조건 |
