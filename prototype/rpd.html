@@ -143,6 +143,24 @@ button:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--gold);outl
 .pick b{display:block;font-family:Cinzel,serif;font-size:14px;margin-bottom:3px}
 .pick span{font-size:11.5px;color:var(--ink-2);line-height:1.45}
 
+/* art panel */
+.art{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-bottom:10px}
+.slot{position:relative;aspect-ratio:1;border:1px dashed var(--line);border-radius:8px;
+  background:var(--surface-2);display:flex;flex-direction:column;align-items:center;
+  justify-content:center;gap:2px;overflow:hidden;cursor:pointer;transition:.13s}
+.slot:hover{border-color:var(--gold)}
+.slot.has{border-style:solid;border-color:var(--ok);background:var(--board)}
+.slot img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;
+  image-rendering:pixelated}
+.slot .n{font-size:8.5px;font-weight:700;color:var(--ink-3);text-align:center;
+  line-height:1.2;padding:0 2px;position:relative;z-index:1}
+.slot.has .n{position:absolute;bottom:1px;background:rgba(0,0,0,.62);color:#fff;
+  width:100%;padding:1px}
+.tintrow{display:flex;gap:6px;margin-bottom:10px;align-items:center}
+.tintrow canvas{width:52px;height:52px;image-rendering:pixelated;border-radius:6px;
+  background:var(--board)}
+.tintrow .lb{font-size:10px;color:var(--ink-3);font-weight:700;letter-spacing:.1em}
+
 /* end */
 .big{text-align:center;padding:8px 0 14px}
 .big .t{font-family:Cinzel,serif;font-size:26px;font-weight:700;margin-bottom:4px}
@@ -169,6 +187,7 @@ button:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--gold);outl
 
   <div id="bar">
     <button class="btn pri" id="go">라운드 시작</button>
+    <button class="btn" id="artbtn" title="스프라이트 넣기">🎨</button>
     <div class="spd" id="spd">
       <button data-s="1" class="on">1×</button>
       <button data-s="2">2×</button>
@@ -180,6 +199,7 @@ button:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--gold);outl
 </div>
 
 <div class="ov" id="ov"><div class="sheet" id="sheet"></div></div>
+<input type="file" id="fpick" accept="image/*" hidden>
 
 <script>
 "use strict";
@@ -338,8 +358,95 @@ function fit(){
 }
 const cssv=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
 
+/* ─── 스프라이트 ─── */
+const SPR={};            // {typeId:{src, tint:{s,h,d,c}}}
+const SPR_H=96;          // 저장 해상도 (타일 대비 2배 높이)
+const BG_KEY=[0x8a,0x9a,0x6b], BG_TOL=42;
+const GLOW_T=.72, GLOW_SOFT=.12;
+
+function hex2rgb(h){h=h.replace("#","");
+  if(h.length===3)h=h.split("").map(c=>c+c).join("");
+  return[parseInt(h.slice(0,2),16),parseInt(h.slice(2,4),16),parseInt(h.slice(4,6),16)];}
+
+/* 배경 제거 → 오토크롭 → 타일 높이로 축소 */
+function prepSprite(img){
+  const c=document.createElement("canvas"); c.width=img.width; c.height=img.height;
+  const x=c.getContext("2d",{willReadFrequently:true});
+  x.drawImage(img,0,0);
+  const d=x.getImageData(0,0,c.width,c.height), p=d.data;
+  let x0=c.width,y0=c.height,x1=-1,y1=-1;
+  for(let i=0;i<p.length;i+=4){
+    if(Math.abs(p[i]-BG_KEY[0])<=BG_TOL&&Math.abs(p[i+1]-BG_KEY[1])<=BG_TOL&&
+       Math.abs(p[i+2]-BG_KEY[2])<=BG_TOL){p[i+3]=0;continue;}
+    if(p[i+3]<20)continue;
+    const px=(i/4)%c.width, py=(i/4)/c.width|0;
+    if(px<x0)x0=px; if(px>x1)x1=px; if(py<y0)y0=py; if(py>y1)y1=py;
+  }
+  x.putImageData(d,0,0);
+  if(x1<0){x0=0;y0=0;x1=c.width-1;y1=c.height-1;}
+  const w=x1-x0+1,h=y1-y0+1;
+  const o=document.createElement("canvas");
+  o.height=SPR_H; o.width=Math.max(1,Math.round(w*SPR_H/h));
+  const ox=o.getContext("2d"); ox.imageSmoothingEnabled=false;
+  ox.drawImage(c,x0,y0,w,h,0,0,o.width,o.height);
+  return o;
+}
+/* 휘도 임계값으로 발광부만 속성색 틴트 — GDD 02문서 9.2절 셰이더와 동일 공식 */
+function tintCanvas(src,rgb){
+  const c=document.createElement("canvas"); c.width=src.width; c.height=src.height;
+  const x=c.getContext("2d",{willReadFrequently:true});
+  x.drawImage(src,0,0);
+  const d=x.getImageData(0,0,c.width,c.height), p=d.data;
+  for(let i=0;i<p.length;i+=4){
+    if(p[i+3]<8)continue;
+    const L=(.299*p[i]+.587*p[i+1]+.114*p[i+2])/255;
+    let m=(L-(GLOW_T-GLOW_SOFT))/(2*GLOW_SOFT);
+    m=Math.max(0,Math.min(1,m)); m=m*m*(3-2*m);      // smoothstep
+    if(m<=0)continue;
+    const k=.6+L*.8;
+    for(let j=0;j<3;j++) p[i+j]=Math.min(255,p[i+j]*(1-m)+rgb[j]*k*m);
+  }
+  x.putImageData(d,0,0);
+  return c;
+}
+function buildTints(typeId,canv){
+  const t={};
+  for(const S of SUITS) t[S.k]=tintCanvas(canv,hex2rgb(cssv(S.c)));
+  SPR[typeId]={base:canv,tint:t,src:canv.toDataURL("image/png")};
+}
+function loadSpriteFile(typeId,file){
+  const fr=new FileReader();
+  fr.onload=()=>{const im=new Image();
+    im.onload=()=>{ buildTints(typeId,prepSprite(im)); saveSprites(); paintArt();
+      toast(`${TOWERS[typeId].hand} 스프라이트 적용`); };
+    im.src=fr.result;};
+  fr.readAsDataURL(file);
+}
+function saveSprites(){
+  try{const o={}; for(const k in SPR)o[k]=SPR[k].src;
+    localStorage.setItem("rpd_spr",JSON.stringify(o));}catch(e){}
+}
+function loadSprites(){
+  let o; try{o=JSON.parse(localStorage.getItem("rpd_spr")||"{}");}catch(e){return;}
+  for(const k in o){ const im=new Image();
+    im.onload=(id=>()=>{const c=document.createElement("canvas");
+      c.width=im.width;c.height=im.height;
+      c.getContext("2d").drawImage(im,0,0); buildTints(+id,c);})(k);
+    im.src=o[k]; }
+}
+
 /* 족보를 형태로 — 실루엣이 족보를 말한다 */
 function drawTower(x,y,t){
+  const S=SPR[t.type];
+  if(S){ // 실제 스프라이트: 타일 하단에 접지, 위로 솟음
+    const cv2=S.tint[t.suit]||S.base;
+    const w=TS*1.05, h=w*cv2.height/cv2.width;
+    ctx.drawImage(cv2, x*TS+(TS-w)/2, y*TS+TS-h, w, h);
+    const lv=G.up[t.type];
+    if(lv>0){ctx.fillStyle=cssv("--gold");
+      for(let i=0;i<lv;i++)ctx.fillRect(x*TS+3+i*4,y*TS+TS-6,3,3);}
+    return;
+  }
   const c=x*TS+TS/2, m=y*TS+TS/2, R=TS*.5, col=cssv(SUITS.find(s=>s.k===t.suit).c);
   ctx.save();
   // 바닥판
@@ -383,7 +490,7 @@ function render(){
   ctx.fillStyle=cssv("--path");
   PATH.forEach(k=>ctx.fillRect((k%COLS)*TS,(k/COLS|0)*TS,TS,TS));
   // 타워
-  G.towers.forEach(t=>drawTower(t.x,t.y,t));
+  [...G.towers].sort((a,b)=>a.y-b.y).forEach(t=>drawTower(t.x,t.y,t));
   // 사거리 (준비 페이즈, 선택 타워)
   if(G.sel){const t=G.sel;
     ctx.strokeStyle=cssv("--gold");ctx.globalAlpha=.5;ctx.lineWidth=1.5;
@@ -520,6 +627,7 @@ function roundEnd(){
   else{toast(`라운드 ${G.round} 클리어 · +${rw}G`);paint();}
 }
 function endGame(won){
+  $("#sheet").dataset.mode="";
   G.phase="over"; G.won=won; G.dead=!won;
   const s=G.stats, hands=Object.entries(s.hands).sort((a,b)=>b[1]-a[1]);
   $("#sheet").innerHTML=`
@@ -547,6 +655,7 @@ window.restart=()=>{$("#ov").classList.remove("on");G=newGame();paint();};
 
 /* ─── 아티팩트 ─── */
 function offerArtifact(){
+  $("#sheet").dataset.mode="";
   const pool=ARTIFACTS.filter(a=>!G.artifacts.includes(a.n));
   if(!pool.length){paint();return;}
   const pick=[]; while(pick.length<3&&pool.length)pick.push(pool.splice(Math.random()*pool.length|0,1)[0]);
@@ -576,6 +685,7 @@ function openBuild(x,y){
   $("#ov").classList.add("on");
 }
 function paintBuild(){
+  $("#sheet").dataset.mode="";
   const b=G.build;
   const e=evalHand(b.sel), T=TOWERS[e.tower], S=SUITS.find(s=>s.k===e.suit), lv=G.up[e.tower];
   const cardHTML=(c,st,i)=>`
@@ -681,12 +791,66 @@ function tap(ev){
   openBuild(x,y);
 }
 
+/* ─── 아트 패널 ─── */
+let artTarget=null;
+function paintArt(){
+  if(!$("#ov").classList.contains("on")||$("#sheet").dataset.mode!=="art")return;
+  const have=Object.keys(SPR).length;
+  $("#sheet").innerHTML=`
+    <div class="sh"><h2>스프라이트</h2><div class="sub">${have}/10 적용됨</div></div>
+    <div class="disc" style="margin:0 0 10px">
+      칸을 탭해 PNG를 넣으면 <b>배경 제거 → 오토크롭 → 타일 크기 축소 → 발광부 틴트</b>까지
+      자동으로 처리해 보드에 바로 올립니다.
+      넣지 않은 칸은 도형으로 그려집니다.</div>
+    <div class="art">${TOWERS.map((t,i)=>`
+      <div class="slot ${SPR[i]?"has":""}" data-i="${i}">
+        ${SPR[i]?`<img src="${SPR[i].src}" alt="">`:""}
+        <div class="n">${t.hand}</div></div>`).join("")}</div>
+    ${artTarget!==null&&SPR[artTarget]?`
+      <div class="ph">${TOWERS[artTarget].hand} · 4속성 틴트 확인</div>
+      <div class="tintrow" id="tintrow">
+        ${SUITS.map(S=>`<div style="text-align:center">
+          <canvas data-s="${S.k}" width="52" height="52"></canvas>
+          <div class="lb" style="color:var(--${S.c.slice(2)})">${S.g}</div></div>`).join("")}
+      </div>
+      <div class="disc" style="margin:0 0 10px">
+        네 개가 <b>서로 뚜렷이 다른 색</b>으로 보여야 합니다.
+        차이가 거의 없다면 발광부가 흰빛이 아니거나 너무 어두운 것입니다.</div>`:""}
+    <div class="acts">
+      <button class="btn" id="clr">전부 지우기</button>
+      <button class="btn pri" id="cls">닫기</button></div>`;
+  if(artTarget!==null&&SPR[artTarget]){
+    $("#tintrow").querySelectorAll("canvas").forEach(cn=>{
+      const src=SPR[artTarget].tint[cn.dataset.s], x=cn.getContext("2d");
+      x.imageSmoothingEnabled=false;
+      const sc=Math.min(52/src.width,52/src.height), w=src.width*sc, h=src.height*sc;
+      x.clearRect(0,0,52,52); x.drawImage(src,(52-w)/2,52-h,w,h);
+    });
+  }
+  $("#sheet").querySelectorAll(".slot").forEach(el=>el.onclick=()=>{
+    artTarget=+el.dataset.i; $("#fpick").click();
+  });
+  $("#clr").onclick=()=>{ if(!confirm("넣은 스프라이트를 전부 지울까요?"))return;
+    for(const k in SPR)delete SPR[k];
+    try{localStorage.removeItem("rpd_spr")}catch(e){}
+    artTarget=null; paintArt(); };
+  $("#cls").onclick=()=>$("#ov").classList.remove("on");
+}
+function openArt(){ $("#sheet").dataset.mode="art"; $("#ov").classList.add("on"); paintArt(); }
+
 /* ─── 부팅 ─── */
 G=newGame();
 addEventListener("resize",()=>{fit();});
 fit(); paint();
 $("#board").addEventListener("click",tap);
 $("#go").onclick=startRound;
+$("#artbtn").onclick=openArt;
+$("#fpick").onchange=e=>{
+  const f=e.target.files[0];
+  if(f&&artTarget!==null)loadSpriteFile(artTarget,f);
+  e.target.value="";
+};
+loadSprites();
 $("#spd").querySelectorAll("button").forEach(b=>b.onclick=()=>{
   G.speed=+b.dataset.s;
   $("#spd").querySelectorAll("button").forEach(x=>x.classList.toggle("on",x===b));
