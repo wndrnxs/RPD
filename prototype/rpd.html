@@ -111,7 +111,6 @@ button:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--gold);outl
 
 /* cards */
 .slots{display:grid;grid-template-columns:repeat(5,1fr);gap:5px;margin-bottom:10px}
-.hand{display:grid;grid-template-columns:repeat(4,1fr);gap:5px;margin-bottom:12px}
 .card{aspect-ratio:5/7;border-radius:7px;border:1.5px solid var(--line);background:var(--surface);
   display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;
   font-weight:900;position:relative;transition:.12s;user-select:none;padding:2px}
@@ -211,9 +210,9 @@ const UP_COST=[60,120,240,480,960];
 
 const ARTIFACTS=[
  {n:"조커의 미소",d:"리드로우 토큰 +1 (스테이지 내내)",f:g=>g.tokens++},
- {n:"한 장 더",  d:"딜을 7장 대신 8장 받는다",        f:g=>g.deal++},
+ {n:"한 장 더",  d:"딜을 5장 대신 6장 받는다",        f:g=>g.deal++},
  {n:"고리대금",  d:"라운드 보상 +50%, 건설 비용 +10%",f:g=>{g.rewardMul*=1.5;g.costMul*=1.1}},
- {n:"검소한 설계",d:"건설 비용 증가폭 10G → 4G",      f:g=>g.costStep=4},
+ {n:"검소한 설계",d:"건설 비용 증가폭을 절반으로",      f:g=>{g.costStep=5;g.costStep2=13}},
  {n:"표식된 덱", d:"딜에 같은 무늬가 항상 3장 이상",   f:g=>g.marked=true},
  {n:"원소 공명", d:"순속성 타워의 특성 효과 +60%",     f:g=>g.pureBoost=1.6},
  {n:"전당포",    d:"철거 환급 40% → 100%",            f:g=>g.refund=1},
@@ -289,14 +288,21 @@ function evalHand(cs){
 /* ─── 게임 상태 ─── */
 let G,ctx,cv,TS,BW,BH,DPR;
 function newGame(){
-  return{life:20,gold:120,round:0,maxRound:30,built:0,towers:[],mobs:[],shots:[],
-    phase:"prep",speed:1,up:new Array(10).fill(0),tokens:3,deal:7,
-    rewardMul:1,costMul:1,costStep:10,refund:.4,killMul:1,pureBoost:1,
+  return{life:20,gold:90,round:0,maxRound:30,built:0,towers:[],mobs:[],shots:[],
+    phase:"prep",speed:1,up:new Array(10).fill(0),tokens:3,deal:5,
+    rewardMul:1,costMul:1,costStep:10,costKnee:15,costStep2:26,refund:.4,killMul:1,pureBoost:1,
     marked:false,revive:false,artifacts:[],
     stats:{hands:{},built:0,gold:0,spent:0,upSpent:0,leaked:0,kills:0},
     log:[],build:null,dead:false,won:false,t:0,spawn:null};
 }
-const cost=()=>G.built===0?0:Math.round((50+(G.built-1)*G.costStep)*G.costMul);
+function cost(){
+  const n=G.built; if(n===0)return 0;
+  const i=n-1;
+  let c = i>=G.costKnee
+    ? 50+(G.costKnee-1)*G.costStep+(i-G.costKnee+1)*G.costStep2
+    : 50+i*G.costStep;
+  return Math.round(c*G.costMul);
+}
 
 /* ─── 덱 ─── */
 function freshDeck(){
@@ -474,9 +480,9 @@ function step(dt){
 }
 function spawnMob(type){
   const d=MTYPES[type], R=G.round;
-  const hp=Math.round((18+R*R*1.35+R*11)*d.hp);
+  const hp=Math.round((14+R*R*.92+R*7.5)*d.hp);
   G.mobs.push({def:d,hp,max:hp,t:0,slow:0,slowT:0,poison:0,poisonT:0,burn:0,burnT:0,
-    gold:Math.round((3+R*.55)*d.g)});
+    gold:Math.round((2.2+R*.16)*d.g)});
 }
 function makeWave(R){
   const q=[];
@@ -506,7 +512,7 @@ function startRound(){
 }
 function roundEnd(){
   G.phase="prep";
-  const rw=Math.round((30+G.round*6)*G.rewardMul);
+  const rw=Math.round((26+G.round*2.6)*G.rewardMul);
   G.gold+=rw; G.stats.gold+=rw;
   G.log.push(`R${G.round} 클리어 +${rw}G (보유 ${G.gold}G, 타워 ${G.towers.length})`);
   if(G.round>=G.maxRound){endGame(true);return;}
@@ -563,77 +569,49 @@ function openBuild(x,y){
   if(G.gold<c){toast(`골드가 ${c-G.gold} 부족합니다`);return;}
   G.gold-=c; G.stats.spent+=c;
   const{deck,hand}=deal();
-  G.build={x,y,deck,hand,sel:[],state:new Array(5).fill(0),tok:G.tokens,cost:c};
+  // 5장 딜 = 그대로 최종 손패. 선택 단계 없음 — 바로 리드로우로.
+  const sel=hand.slice(0,5), extra=hand.slice(5);
+  G.build={x,y,deck,sel,extra,state:new Array(5).fill(0),tok:G.tokens,cost:c,dead:[]};
   paintBuild();
   $("#ov").classList.add("on");
 }
 function paintBuild(){
-  const b=G.build, picked=b.sel.length===5;
-  const cardHTML=(c,cls,mk)=>c
-    ? `<div class="card ${c.s} ${cls}" ${mk?`data-mk="1"`:""}>
-         <div class="rk">${rkS(c.r)}</div><div class="su">${SUITS.find(s=>s.k===c.s).g}</div>
-         ${mk?`<div class="mk">${mk}</div>`:""}</div>`
-    : `<div class="card e"></div>`;
-  let pv="";
-  if(picked){
-    const e=evalHand(b.sel), T=TOWERS[e.tower], S=SUITS.find(s=>s.k===e.suit);
-    const lv=G.up[e.tower];
-    pv=`<div class="pv"><div>
-        <div class="hn">${e.label}</div>
-        <div class="hd">${T.name}${lv?` · 강화 Lv.${lv}`:""}</div></div>
-      <div class="st">${S.g} ${S.n} · ${S.t}${e.pure?" (순)":" (혼합 60%)"}<br>
-        공격 ${Math.round(towerDmg({...T,type:e.tower,mult:e.mult,rate:T.rate,crit:e.crit}))}/s
-        · 사거리 ${T.rng===99?"전역":T.rng}</div></div>`;
-  }else{
-    pv=`<div class="pv"><div><div class="hn" style="color:var(--ink-3)">${b.sel.length}/5 선택</div>
-      <div class="hd">카드를 5장 고르세요</div></div></div>`;
-  }
+  const b=G.build;
+  const e=evalHand(b.sel), T=TOWERS[e.tower], S=SUITS.find(s=>s.k===e.suit), lv=G.up[e.tower];
+  const cardHTML=(c,st,i)=>`
+    <div class="card ${c.s} ${st===1?"tok":st===2?"lock":""}" data-i="${i}">
+      <div class="rk">${rkS(c.r)}</div>
+      <div class="su">${SUITS.find(s=>s.k===c.s).g}</div>
+      ${st===1?'<div class="mk">🔄</div>':st===2?'<div class="mk">🔒</div>':""}
+    </div>`;
+  const dmg=Math.round(towerDmg({...T,type:e.tower,mult:e.mult}));
   $("#sheet").innerHTML=`
     <div class="sh"><h2>타워 건설</h2>
       <div class="sub">${b.cost===0?"첫 타워 무료":`${b.cost}G 지불`} · 보유 ${G.gold}G</div></div>
-    <div class="slots">${[0,1,2,3,4].map(i=>{
-      const c=b.sel[i]; if(!c)return cardHTML(null);
-      const st=b.state[i];
-      return cardHTML(c, st===1?"tok":st===2?"lock":"sel", st===1?"🔄":st===2?"🔒":"");
-    }).join("")}</div>
-    ${pv}
+    <div class="slots">${b.sel.map((c,i)=>cardHTML(c,b.state[i],i)).join("")}</div>
+    <div class="pv"><div>
+        <div class="hn">${e.label}</div>
+        <div class="hd">${T.name}${lv?` · 강화 Lv.${lv}`:""}</div></div>
+      <div class="st">${S.g} ${S.n} · ${S.t}${e.pure?" (순)":" (혼합 60%)"}<br>
+        공격 ${dmg}/s · 사거리 ${T.rng===99?"전역":T.rng}</div></div>
     <div class="toks">리드로우 토큰
       <span class="dots">${"●".repeat(b.tok)}<i>${"●".repeat(Math.max(0,G.tokens-b.tok))}</i></span>
       <span style="color:var(--ink-3);font-weight:600">${b.tok}/${G.tokens}</span></div>
-    <div class="ph">손패 ${b.hand.length}장</div>
-    <div class="hand">${b.hand.map((c,i)=>
-      cardHTML(c, b.sel.includes(c)?"sel":"", b.sel.includes(c)?"✓":"")).join("")}</div>
-    <div class="acts">
-      <button class="btn pri" id="ok" ${picked?"":"disabled"}>확정</button>
-    </div>
-    <div class="disc">토큰으로 교체한 카드(🔄)는 더 이상 토큰으로 못 바꿉니다.
-      폐기된 카드는 다시 나오지 않습니다.</div>`;
-
-  // 손패 탭 → 선택
-  $("#sheet").querySelectorAll(".hand .card").forEach((el,i)=>{
-    const c=b.hand[i]; if(!c)return;
+    <div class="acts"><button class="btn pri" id="ok">확정</button></div>
+    <div class="disc">카드를 탭하면 토큰 1개로 교체합니다.
+      한 번 교체한 카드(🔄)는 더 이상 바꿀 수 없습니다.
+      ${b.dead.length?`<br>빠진 카드: ${b.dead.map(c=>rkS(c.r)+SUITS.find(s=>s.k===c.s).g).join(" ")}`:""}</div>`;
+  $("#sheet").querySelectorAll(".slots .card").forEach(el=>{
+    const i=+el.dataset.i;
     el.onclick=()=>{
-      const at=b.sel.indexOf(c);
-      if(at>=0){ if(b.state[at]!==0)return; b.sel.splice(at,1); b.state.splice(at,1); b.state.push(0); }
-      else if(b.sel.length<5){ b.sel.push(c); }
-      paintBuild();
-    };
-  });
-  // 슬롯 탭 → 리드로우
-  $("#sheet").querySelectorAll(".slots .card").forEach((el,i)=>{
-    if(!b.sel[i])return;
-    el.onclick=()=>{
-      if(b.state[i]!==0){toast(b.state[i]===1?"이미 토큰을 쓴 슬롯입니다":"확정된 카드입니다");return;}
+      if(b.state[i]!==0){toast("이미 교체한 카드입니다");return;}
       if(b.tok<=0){toast("토큰을 모두 썼습니다");return;}
-      b.tok--;
-      const old=b.sel[i];
-      b.hand=b.hand.filter(c=>c!==old);
-      const nc=b.deck.shift();
-      b.sel[i]=nc; b.state[i]=1;
+      b.tok--; b.dead.push(b.sel[i]);
+      b.sel[i]=b.deck.shift(); b.state[i]=1;
       paintBuild();
     };
   });
-  const ok=$("#ok"); if(ok) ok.onclick=confirmBuild;
+  $("#ok").onclick=confirmBuild;
 }
 function confirmBuild(){
   const b=G.build, e=evalHand(b.sel), T=TOWERS[e.tower];
@@ -665,7 +643,7 @@ function paint(){
       `<span class="chip${k==="boss"?" boss":""}">${MTYPES[k].n} ×${v}</span>`).join("")||
       '<span class="chip">—</span>'}</div>
     <div class="ph">건설 · 다음 타워 ${c===0?"무료":c+"G"}</div>
-    <div class="disc" style="margin:0 0 12px">빈 칸을 탭하면 카드 ${G.deal}장을 받습니다.
+    <div class="disc" style="margin:0 0 12px">빈 칸을 탭하면 카드 ${G.deal}장을 받고 토큰으로 교체합니다.
       ${G.artifacts.length?`<br><b>아티팩트:</b> ${G.artifacts.join(" · ")}`:""}</div>
     <div class="ph">족보 강화 · 스테이지 종료 시 초기화</div>
     <div class="ug">${TOWERS.map((t,i)=>{
